@@ -1,0 +1,35 @@
+# Local configuration and secrets
+config.yaml
+config.local.yaml
+.env
+.env.*
+
+# Data, caches, checkpoints, and experiment outputs
+data/*
+!data/.gitkeep
+outputs/*
+!outputs/.gitkeep
+cache/
+checkpoints/
+*.pt
+*.pth
+*.ckpt
+*.log
+
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.venv/
+venv/
+
+# Notebooks and editors
+.ipynb_checkpoints/
+.vscode/
+.idea/
+
+# OS metadata
+.DS_Store
+Thumbs.db

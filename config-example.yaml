@@ -1,0 +1,16 @@
+# Copy this file to config.yaml and update the paths for your system.
+# Relative paths are resolved from the repository root.
+
+paths:
+  # Clone DINOv3 and download the ViT-S/16+ weights from:
+  # https://github.com/facebookresearch/dinov3
+  dino_repo: "/path/to/dinov3"
+  dino_weights: "/path/to/dinov3_vits16plus_pretrain_lvd1689m-4057cbaa.pth"
+
+  # UNICORNv2 data in ImageFolder layout.
+  train_sar: "./data/train/SAR_Train"
+  train_eo: "./data/train/EO_Train"
+  val_sar: "./data/val/IID"
+
+  # Generated checkpoints, metrics, logs, and reusable feature caches.
+  output_dir: "./outputs"
