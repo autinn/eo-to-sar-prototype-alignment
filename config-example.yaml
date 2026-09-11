@@ -10,7 +10,7 @@ paths:
   # UNICORNv2 data in ImageFolder layout.
   train_sar: "./data/train/SAR_Train"
   train_eo: "./data/train/EO_Train"
-  val_sar: "./data/val/IID"
+  test_sar: "./data/test/IID"
 
-  # Generated checkpoints, metrics, logs, and reusable feature caches.
+  # Generated metrics and best-epoch predictions.
   output_dir: "./outputs"
