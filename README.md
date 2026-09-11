@@ -31,3 +31,18 @@ prototypes without requiring paired EO and SAR images. A SAR
 encoder is then trained to classify SAR images while aligning its embeddings
 with the corresponding EO class prototypes. At inference time, the model
 operates using SAR imagery alone.
+
+# Quickstart
+
+# 📋 Method Overview
+
+# 📦 Installation
+
+# 📝 Configuration
+
+# 📂 Data Setup
+
+# 🖥️ Usage
+
+# 📖 Citation
+

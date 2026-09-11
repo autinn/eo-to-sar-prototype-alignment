@@ -41,9 +41,9 @@ class RBFKernel(nn.Module):
         ).sum(dim=0)
 
 
-# Distribution-alignment objective for the unpaired MMD baseline.
+# Distribution alignment objective for the unpaired MMD baseline.
 class MMDLoss(nn.Module):
-    """Biased empirical maximum mean discrepancy used in the paper baseline."""
+    """Empirical estimate of squared MMD (maximum mean discrepancy) used in the paper."""
 
     def __init__(self) -> None:
         super().__init__()
