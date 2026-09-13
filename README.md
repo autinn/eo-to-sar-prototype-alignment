@@ -53,7 +53,7 @@ The repository compares five ways of using DINOv3 for SAR classification:
 | SAR-only fine-tuning | SAR | LoRA | Cross-entropy |
 | MMD alignment | Unpaired SAR and EO (labeled) | LoRA | Cross-entropy + global MMD |
 | EO prototype alignment **(ours)** | Unpaired SAR and EO (labeled) | LoRA | Cross-entropy + class-prototype alignment |
-| Synthetic prototype alignment *(coming soon)* | SAR | LoRA | Cross-entropy + synthetic class-prototype alignment |
+| Synthetic prototype alignment | SAR | LoRA | Cross-entropy + synthetic class-prototype alignment |
 
 The MMD experiment samples SAR and EO images independently and therefore does
 not use image pairs. Prototype alignment first averages the EO features within
@@ -188,10 +188,10 @@ prototype for its class:
 python src/train_eo_prototype_alignment.py
 ```
 
-### Synthetic prototype alignment *(coming soon)*
+### Synthetic prototype alignment
 
 Replace the EO prototypes with fixed synthetic class prototypes and train using
-the same classification and alignment objectives. The planned entry point is:
+the same classification and alignment objectives:
 
 ```bash
 python src/train_synthetic_prototype_alignment.py

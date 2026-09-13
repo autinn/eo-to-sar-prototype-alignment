@@ -1,0 +1,5 @@
+# Install PyTorch and torchvision separately for your CUDA version.
+numpy
+peft
+PyYAML
+scikit-learn
