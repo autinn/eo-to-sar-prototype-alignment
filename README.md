@@ -12,8 +12,6 @@
 
 </div>
 
-> **Under construction:** this repository is being prepared for release.
-
 This repository contains the code accompanying the paper
 *[Cross-modal learning for SAR target recognition using optical vision foundation models](https://arxiv.org/abs/2609.07753)*.
 
@@ -216,7 +214,7 @@ The scripts do not save model checkpoints.
 
 ## 📖 Citation
 
-If you use this code, please cite:
+To cite the paper, use:
 
 ```bibtex
 @misc{hirsch2026crossmodal,
