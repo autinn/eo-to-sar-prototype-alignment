@@ -33,3 +33,7 @@ venv/
 # OS metadata
 .DS_Store
 Thumbs.db
+
+# Analysis harness additions
+.venv/
+data/fake/

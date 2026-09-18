@@ -1,0 +1,128 @@
+# Results as reported in arXiv 2609.07753, "Cross-modal learning for SAR target
+# recognition using optical vision foundation models" (Hirsch, Hopgood, Khan,
+# Altmann, Davies; SPIE Sensors + Imaging 2026).
+#
+# Transcribed from the paper's results table. Accuracy is percent correct on the
+# 770-image balanced test set (77 images in each of 10 vehicle classes) and each
+# figure is the mean over five training seeds.
+#
+# Two caveats that affect how these numbers may be analysed:
+#
+#   1. The paper does not state whether its reported standard deviation uses the
+#      population (ddof=0) or sample (ddof=1) convention. summarize_runs() in
+#      src/utils.py, which produced the repository's own summary.json files, uses
+#      numpy's default and therefore reports the population std. If the published
+#      figures came from that code path they are population stds and should be
+#      converted before use in a t-test; at five seeds the correction is a factor
+#      of 1.118. run_reported_stats.py reports both readings so the conclusion can
+#      be seen not to depend on the choice.
+#
+#   2. The seed sets differ between methods, so per-seed pairing is impossible and
+#      only unpaired comparisons are available. See analysis/CONFOUNDS.md.
+
+source:
+  title: "Cross-modal learning for SAR target recognition using optical vision foundation models"
+  arxiv: "2609.07753"
+  venue: "SPIE Sensors + Imaging 2026"
+  test_set_size: 770
+  test_set_balanced: true
+  num_classes: 10
+
+methods:
+  frozen:
+    label: "Frozen DINOv3"
+    accuracy_mean: 26.9
+    accuracy_std: 0.2
+    macro_f1: 0.235
+    seeds: 5
+    seed_list: [30, 42, 123, 777, 2025]
+    learning_rate: 1.0e-3
+    uses_eo_data: false
+    uses_eo_labels: false
+    note: "Linear probe on frozen features; no LoRA, no early stopping."
+
+  sar_only:
+    label: "SAR-only LoRA fine-tuning"
+    accuracy_mean: 29.8
+    accuracy_std: 1.4
+    macro_f1: 0.244
+    seeds: 5
+    seed_list: [10, 40, 41, 42, 43]
+    learning_rate: 4.0e-6
+    uses_eo_data: false
+    uses_eo_labels: false
+    note: "Cross-entropy only; the baseline any alignment method must beat."
+
+  mmd:
+    label: "Unpaired MMD alignment"
+    accuracy_mean: 31.8
+    accuracy_std: 1.6
+    macro_f1: 0.277
+    seeds: 5
+    seed_list: [10, 40, 41, 42, 43]
+    learning_rate: 9.0e-6
+    uses_eo_data: true
+    uses_eo_labels: false
+    note: >-
+      Matches the global SAR feature distribution to the EO distribution. EO
+      labels are explicitly discarded, so any gain here cannot come from class
+      correspondence. This makes it the reference against which a claim about
+      transferred class structure has to be judged.
+
+  eo_prototype:
+    label: "EO prototype alignment"
+    accuracy_mean: 33.3
+    accuracy_std: 1.3
+    macro_f1: 0.281
+    seeds: 5
+    seed_list: [10, 40, 41, 42, 43]
+    learning_rate: 8.0e-6
+    uses_eo_data: true
+    uses_eo_labels: true
+    note: "The proposed method: per-class EO means as alignment targets."
+
+  synthetic_prototype:
+    label: "Synthetic prototype alignment"
+    accuracy_mean: 29.3
+    accuracy_std: 2.0
+    macro_f1: 0.242
+    seeds: 5
+    seed_list: [30, 42, 123, 777, 2025]
+    learning_rate: 4.0e-6
+    uses_eo_data: false
+    uses_eo_labels: false
+    note: >-
+      The paper's control: a simplex equiangular tight frame carrying no optical
+      information. Differs from eo_prototype in learning rate and seed set as
+      well as in prototype type.
+
+# Seven-class figures, reported for the two methods the paper highlights. The
+# four light-vehicle classes (SUV, pickup_truck, sedan, van) are merged because
+# their SAR signatures are similar; see seven_class_metrics in src/evaluation.py.
+seven_class:
+  frozen:
+    accuracy_mean: 41.1
+    accuracy_std: 1.1
+    macro_f1: 0.305
+  eo_prototype:
+    accuracy_mean: 52.2
+    accuracy_std: 1.3
+    macro_f1: 0.384
+
+# Comparisons worth calling out, with the reason each matters.
+comparisons_of_interest:
+  - pair: [eo_prototype, mmd]
+    why: >-
+      The load-bearing comparison for the paper's central claim. MMD uses no EO
+      labels, so if EO prototypes do not clearly beat it, the evidence that
+      class-specific optical structure transfers is weak.
+  - pair: [eo_prototype, synthetic_prototype]
+    why: >-
+      The paper's own control, testing optical structure against pure geometry.
+      Confounded by learning rate and seed set.
+  - pair: [eo_prototype, sar_only]
+    why: "Does alignment help at all, relative to no alignment."
+  - pair: [mmd, sar_only]
+    why: "Does label-free distribution matching alone help."
+  - pair: [synthetic_prototype, sar_only]
+    why: "Does prototype geometry alone help, without optical information."

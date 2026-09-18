@@ -1,0 +1,7 @@
+# Additional dependencies for the analysis harness in src/geometry.py,
+# src/error_placement.py, src/stats_utils.py and the tests.
+# Install alongside requirements.txt.
+scipy
+matplotlib
+pillow
+pytest
