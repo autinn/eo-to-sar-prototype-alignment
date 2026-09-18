@@ -1,220 +1,201 @@
 <div align="center">
 
-# Cross-modal learning for SAR target recognition using optical vision foundation models
+# What Transfers? Optical-to-SAR Prototype Alignment
 
-### Code for EO-to-SAR prototype alignment
+**A capstone investigation into the mechanism behind cross-modal transfer for SAR target recognition**
 
-[![arXiv](https://img.shields.io/badge/arXiv-2609.07753-b31b1b.svg)](https://arxiv.org/abs/2609.07753)
-
-**[Lucas Hirsch](https://luhirsch.github.io/) · [James R. Hopgood](https://www.research.ed.ac.uk/en/persons/james-hopgood/) · Javid Khan · [Yoann Altmann](https://researchportal.hw.ac.uk/en/persons/yoann-altmann/) · [Mike E. Davies](https://eng.ed.ac.uk/about/people/professor-michael-e-davies)**
-
-📝 [Paper](https://arxiv.org/abs/2609.07753) · Accepted for presentation at SPIE Sensors + Imaging 2026
+Fork of [the official code](https://github.com/LucasHirsch/eo-to-sar-prototype-alignment) for
+Hirsch et al., *Cross-modal learning for SAR target recognition using optical vision
+foundation models* ([arXiv:2609.07753](https://arxiv.org/abs/2609.07753), SPIE Sensors + Imaging 2026)
 
 </div>
 
-This repository contains the code accompanying the paper
-*[Cross-modal learning for SAR target recognition using optical vision foundation models](https://arxiv.org/abs/2609.07753)*.
+---
 
-We investigate whether electro-optical (EO) vision foundation models (e.g. DINOv3) can
-provide supervision for synthetic aperture radar (SAR) target recognition.
-A frozen DINOv3 EO encoder is used to construct optical class prototypes
-without requiring paired EO and SAR images. A SAR encoder is then trained to
-classify SAR images while aligning its embeddings with the corresponding EO
-class prototypes. At inference time, the model operates using SAR imagery
-alone.
+## What this is
+
+The original work trains a SAR encoder to classify radar imagery while pulling its
+features toward per-class prototypes computed from a frozen optical model. It reaches
+33.3% on ten vehicle classes against 26.9% for a frozen baseline, and asks the right
+follow-up question: does this work because optical prototypes carry transferable
+semantic structure, or because pulling features toward any well-separated targets
+regularises the feature space?
+
+**This fork investigates that question.** It adds a measurement harness, a corrected
+experimental protocol, and a statistical re-analysis of the published results — all
+purely additive. No upstream file is modified, so the authors' reproduction runs
+unchanged and the fork stays diffable against their repository.
+
+Two findings are already established and need no compute:
+
+- The proposed method is **not significantly better than its own label-free baseline**
+  (1.5 pp, t = 1.63, p = 0.144). That comparison had 37% power at five seeds; fifteen
+  are needed.
+- The published control **varies three things at once** — prototype type, learning rate,
+  and seed set — and model selection reads the test set.
+
+For the full story, see **[WRITE_UP.md](WRITE_UP.md)**. For what happens next, see
+**[ROADMAP.md](ROADMAP.md)**.
 
 ## Quickstart
 
-1. Install PyTorch, torchvision, and the remaining dependencies
-   ([Installation](#installation)).
-2. Clone DINOv3 and download the ViT-S+/16 weights.
-3. Copy `config-example.yaml` to `config.yaml` and update the paths
-   ([Configuration](#configuration)).
-4. Arrange the EO and SAR images in PyTorch `ImageFolder` format
-   ([Data setup](#data-setup)).
-5. Run one of the experiment scripts ([Usage](#usage)).
-
-For example:
+Everything below runs with **no model weights and no real data**:
 
 ```bash
-cp config-example.yaml config.yaml
-python src/train_eo_prototype_alignment.py
+make setup      # create .venv, install dependencies (~850 MB)
+make offline    # tests, statistics, figures, end-to-end pipeline check
 ```
 
-## 📋 Method Overview
+That produces the statistical analysis, three figures, and a validated pipeline run
+in a few minutes. `make help` lists every target; `make check` reports what is
+available and what is blocked.
 
-The repository compares five ways of using DINOv3 for SAR classification:
+## Repository layout
 
-| Method | Training data | Adaptation | Objective |
-|---|---|---|---|
-| Frozen DINOv3 | SAR | Linear head only | Cross-entropy |
-| SAR-only fine-tuning | SAR | LoRA | Cross-entropy |
-| MMD alignment | Unpaired SAR and EO (labeled) | LoRA | Cross-entropy + global MMD |
-| EO prototype alignment **(ours)** | Unpaired SAR and EO (labeled) | LoRA | Cross-entropy + class-prototype alignment |
-| Synthetic prototype alignment | SAR | LoRA | Cross-entropy + synthetic class-prototype alignment |
+```
+├── README.md                 you are here
+├── WRITE_UP.md               the full story: motivation, gap, method, findings
+├── ROADMAP.md                what remains, phased against the project calendar
+├── UPSTREAM_README.md        the original authors' README, unmodified
+├── Makefile                  pipeline entry points
+│
+├── src/
+│   │  ── upstream, unmodified ──
+│   ├── train_frozen_dino.py              linear probe baseline
+│   ├── train_sar_only.py                 LoRA, no alignment
+│   ├── train_mmd_alignment.py            global distribution matching (no labels)
+│   ├── train_eo_prototype_alignment.py   the proposed method
+│   ├── train_synthetic_prototype_alignment.py   the ETF control
+│   ├── model_utils.py, evaluation.py, utils.py, losses.py
+│   │
+│   │  ── this fork: measurement ──
+│   ├── geometry.py           prototype geometry descriptors
+│   ├── prototype_variants.py the ablation ladder
+│   ├── error_placement.py    where alignment residual lands
+│   ├── stats_utils.py        significance, effect size, power
+│   │
+│   │  ── this fork: infrastructure ──
+│   ├── feature_simulator.py  synthetic features with controllable geometry
+│   ├── stub_backbone.py      stand-in for the gated DINOv3 weights
+│   ├── make_fake_unicorn.py  synthetic UNICORNv2-shaped chips
+│   ├── extract_and_save_features.py   feature persistence
+│   │
+│   │  ── this fork: pipeline ──
+│   ├── run_reported_stats.py     analyse the published numbers
+│   ├── run_reproduction.py       reproduce the five published methods
+│   ├── run_variant_experiment.py the corrected experiment
+│   ├── analyse_experiment.py     analyse its output
+│   ├── smoke_pipeline.py         end-to-end check
+│   └── make_plots.py             figures
+│
+├── tests/                    200 tests, analytic expected values
+├── analysis/                 generated artifacts and written findings
+│   ├── README.md             harness documentation
+│   ├── CONFOUNDS.md          the design audit
+│   ├── paper_reported_results.yaml   transcribed published figures
+│   ├── reported_stats.{json,csv}     the statistical re-analysis
+│   └── *.png                 figures
+│
+├── data/                     datasets (gitignored)
+└── outputs/                  training outputs and cached features (gitignored)
+```
 
-The MMD experiment samples SAR and EO images independently and therefore does
-not use image pairs. Prototype alignment first averages the EO features within
-each class, then uses the resulting fixed class prototypes as targets for the
-SAR embeddings.
+## Setup
 
-Synthetic prototype alignment replaces the EO prototypes with fixed synthetic
-class prototypes. This provides a control for whether improvements come from
-the geometry of the EO prototypes rather than prototype regularization alone.
-
-All methods use SAR images alone for evaluation.
-
-## 📦 Installation
-
-Clone the [official DINOv3 repository](https://github.com/facebookresearch/dinov3)
-and request/download the web pretrained **ViT-S+/16** weights.
-
-Install a recent version of PyTorch and torchvision suitable for your CUDA
-version by following the [official PyTorch instructions](https://pytorch.org/get-started/locally/).
-Then install the remaining dependencies:
+Requires Python 3.12 and [uv](https://github.com/astral-sh/uv).
 
 ```bash
-pip install -r requirements.txt
+make setup
 ```
 
-Alternatively, install them directly:
+Or manually:
 
 ```bash
-pip install numpy pyyaml scikit-learn peft
+export HF_HUB_DISABLE_XET=1     # Hugging Face's chunk cache doubles weight storage
+uv venv .venv --python 3.12
+uv pip install --python .venv/bin/python -r requirements.txt -r requirements-analysis.txt
 ```
 
-GPU training is strongly recommended for the LoRA experiments. The scripts use
-CUDA when it is available and otherwise fall back to CPU. If several GPUs are
-visible, select the required CUDA device in the training script.
+The virtualenv is about 850 MB, dominated by PyTorch. Nothing in the offline pipeline
+downloads model weights.
 
-## 📝 Configuration
+### For the online pipeline
 
-All machine-specific paths are configured in `config.yaml`. Start by copying
-the provided example:
+Two external dependencies, both gated:
+
+| What | How | Size |
+|---|---|---|
+| DINOv3 ViT-S/16+ weights | Request access from Meta, then clone [facebookresearch/dinov3](https://github.com/facebookresearch/dinov3) | ~86 MB |
+| UNICORNv2 EO/SAR chips | [Codabench MAVIC-C](https://www.codabench.org/forums/12351/) (account required) | ~2 GB |
+
+Then copy `config-example.yaml` to `config.yaml` and fill in the paths. `make check`
+verifies them.
+
+Chips are small — 55×55 SAR and 31×31 EO — so the full dataset is about 2 GB and a
+ten-image-per-class subset is under a megabyte.
+
+## Usage
+
+### Offline — no weights, no data
 
 ```bash
-cp config-example.yaml config.yaml
+make test        # 200 tests
+make stats       # statistical re-analysis -> analysis/reported_stats.{json,csv}
+make plots       # three figures -> analysis/*.png
+make smoke       # end-to-end pipeline on stub backbone + synthetic chips
+make variants    # variant experiment protocol check
+make offline     # all of the above
 ```
 
-Then update the paths for your system:
-
-```yaml
-paths:
-  dino_repo: "/path/to/dinov3"
-  dino_weights: "/path/to/dinov3_vits16plus_pretrain_lvd1689m-4057cbaa.pth"
-
-  train_sar: "./data/train/SAR_Train"
-  train_eo: "./data/train/EO_Train"
-  test_sar: "./data/test/IID"
-
-  output_dir: "./outputs"
-```
-
-Paths may be absolute or relative. Relative paths are resolved from the
-repository root, regardless of where a script is launched.
-
-Your local `config.yaml` is ignored by Git, so each user can keep their own
-paths without committing them.
-
-## 📂 Data Setup
-
-The experiments use the UNICORNv2 EO/SAR vehicle dataset, which contains paired
-EO and SAR images of 10 vehicle classes. This dataset is used for the MAVIC-C
-competition, part of a CVPR workshop, and can be downloaded from the official
-[competition website](https://www.codabench.org/forums/12351/).
-
-The expected structure is:
-
-```text
-data/
-├── train/
-│   ├── SAR_Train/
-│   │   ├── <class_name>/
-│   │   └── ...
-│   └── EO_Train/
-│       ├── <class_name>/
-│       └── ...
-└── test/
-    └── IID/
-        ├── <class_name>/
-        └── ...
-```
-
-The folder names define the class labels through
-[`torchvision.datasets.ImageFolder`](https://pytorch.org/vision/stable/generated/torchvision.datasets.ImageFolder.html).
-The EO and SAR folders must use the same class names, but individual EO and SAR
-images do not need to be paired.
-
-You may also keep the dataset elsewhere and point `config.yaml` to its
-location.
-
-## 🖥️ Usage
-
-Run each command from the repository root.
-
-### Frozen DINOv3 baseline
-
-Extract frozen SAR features once and train weighted linear classifiers:
+### Online — needs weights and data
 
 ```bash
-python src/train_frozen_dino.py
+make features       # extract and cache real features (~660 MB per split)
+make reproduce      # run the five published methods, compare to the paper
+make variants-real  # the corrected experiment, 15 seeds
+make analyse        # correlate placement and geometry against outcome
+make online         # reproduce -> experiment -> analysis
 ```
 
-### SAR-only LoRA fine-tuning
+## Working without the gated model
 
-Fine-tune the SAR encoder using labelled SAR images and cross-entropy only:
+DINOv3 access takes time, and the dataset alone is useless without it. Rather than
+wait, `stub_backbone.py` implements the same contract the rest of the code depends on
+— `.embed_dim`, a `(batch, embed_dim)` forward pass, and `qkv` submodules for LoRA to
+attach to. Every code path downstream of the backbone therefore runs and is tested
+today, and swapping `load_stub_model` for `load_dino_model` is the only change needed
+when access arrives.
 
-```bash
-python src/train_sar_only.py
-```
+It is a structural stand-in, not a model of DINOv3. **No number computed against it is
+a finding**, and saved feature files record which backbone produced them because stub
+and real features are identical in shape and dtype. Re-run `make smoke` the day access
+is granted, before trusting anything.
 
-### Unpaired MMD alignment
+## On the tests
 
-Fine-tune the SAR encoder while matching the global SAR feature distribution to
-independently sampled EO features:
+Numerical assertions are analytic rather than golden — the expected value is derived
+from the mathematics, not recorded from a previous run:
 
-```bash
-python src/train_mmd_alignment.py
-```
+- A simplex ETF has pairwise cosine exactly `-1/(K-1)` (uniform to 8.3e-17)
+- A random rotation preserves the Gram matrix (to 7.8e-16)
+- Residual confined to singular direction `i` concentrates at exactly `D·w_i`
+- Residual in the classifier's nullspace perturbs the logits by ~1e-15
 
-### EO prototype alignment
+This caught four bugs that returned plausible numbers rather than failing — including a
+concentration metric that reported 0.99 where the true value was 0.0, and an
+interpretation branch that concluded "the advantage travels with the angular geometry"
+from two zero-sized gaps. Both would have produced confident, wrong claims.
 
-Construct fixed EO class prototypes and align each SAR embedding with the
-prototype for its class:
+## Scope
 
-```bash
-python src/train_eo_prototype_alignment.py
-```
+The statistical findings and the design audit are claims about the published work,
+verified against its reported numbers and its source code. Everything else is
+instrumentation, validated on synthetic data. **No claim about SAR is supported until
+the harness runs against real features.**
 
-### Synthetic prototype alignment
+## Citation
 
-Replace the EO prototypes with fixed synthetic class prototypes and train using
-the same classification and alignment objectives:
-
-```bash
-python src/train_synthetic_prototype_alignment.py
-```
-
-### Outputs
-
-Each method writes to its own directory under the configured `output_dir`:
-
-```text
-outputs/<method>/
-├── results.csv
-├── summary.json
-└── predictions_seed_<seed>.csv
-```
-
-`results.csv` contains the best-epoch metrics for each seed,
-`summary.json` contains the aggregate mean and standard deviation, and each
-prediction file contains the true and predicted class for every test image.
-
-The scripts do not save model checkpoints.
-
-## 📖 Citation
-
-To cite the paper, use:
+The original work:
 
 ```bibtex
 @misc{hirsch2026crossmodal,
@@ -227,3 +208,6 @@ To cite the paper, use:
   url           = {https://arxiv.org/abs/2609.07753}
 }
 ```
+
+The error-placement analysis adapts a concept (not code) from work on cross-model KV
+cache transfer, [arXiv:2608.03893](https://arxiv.org/html/2608.03893).
