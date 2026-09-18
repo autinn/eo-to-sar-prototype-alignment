@@ -412,10 +412,16 @@ def main() -> None:
     print("=" * 78)
     print(f"  {'variant':<22}{'diff':>8}{'paired t':>10}{'unpaired t':>12}")
     for row in comparisons:
+        # paired_t is None when every seed shows the same difference, which makes
+        # the statistic undefined rather than large; format defensively so a
+        # degenerate run prints a dash instead of crashing the pipeline.
+        def _format(value: float | None, width: int) -> str:
+            return f"{value:{width}.2f}" if isinstance(value, float) else f"{'-':>{width}}"
+
         print(
             f"  {row['variant_b']:<22}{row['mean_paired_difference']:+8.3f}"
-            f"{row.get('paired_t', float('nan')):10.2f}"
-            f"{row.get('unpaired_t', float('nan')):12.2f}"
+            f"{_format(row.get('paired_t'), 10)}"
+            f"{_format(row.get('unpaired_t'), 12)}"
         )
 
     arguments.out.mkdir(parents=True, exist_ok=True)

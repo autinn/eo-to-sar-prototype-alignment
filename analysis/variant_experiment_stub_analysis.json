@@ -1,0 +1,170 @@
+{
+  "source": "analysis/variant_experiment_stub.json",
+  "backbone": "stub",
+  "metric": "accuracy",
+  "variant_summary": {
+    "centered_shuffled": {
+      "n_seeds": 3,
+      "mean": 0.10000000000000002,
+      "std": 1.6996749443881478e-17,
+      "ci_low": 0.10000000000000002,
+      "ci_high": 0.10000000000000002
+    },
+    "cosine_matched": {
+      "n_seeds": 3,
+      "mean": 0.10000000000000002,
+      "std": 1.6996749443881478e-17,
+      "ci_low": 0.10000000000000002,
+      "ci_high": 0.10000000000000002
+    },
+    "etf": {
+      "n_seeds": 3,
+      "mean": 0.10000000000000002,
+      "std": 1.6996749443881478e-17,
+      "ci_low": 0.10000000000000002,
+      "ci_high": 0.10000000000000002
+    },
+    "gaussian": {
+      "n_seeds": 3,
+      "mean": 0.10000000000000002,
+      "std": 1.6996749443881478e-17,
+      "ci_low": 0.10000000000000002,
+      "ci_high": 0.10000000000000002
+    },
+    "label_permuted": {
+      "n_seeds": 3,
+      "mean": 0.10000000000000002,
+      "std": 1.6996749443881478e-17,
+      "ci_low": 0.10000000000000002,
+      "ci_high": 0.10000000000000002
+    },
+    "mean_shuffled": {
+      "n_seeds": 3,
+      "mean": 0.10000000000000002,
+      "std": 1.6996749443881478e-17,
+      "ci_low": 0.10000000000000002,
+      "ci_high": 0.10000000000000002
+    },
+    "rotated": {
+      "n_seeds": 3,
+      "mean": 0.10000000000000002,
+      "std": 1.6996749443881478e-17,
+      "ci_low": 0.10000000000000002,
+      "ci_high": 0.10000000000000002
+    },
+    "source": {
+      "n_seeds": 3,
+      "mean": 0.10000000000000002,
+      "std": 1.6996749443881478e-17,
+      "ci_low": 0.10000000000000002,
+      "ci_high": 0.10000000000000002
+    }
+  },
+  "predictor_correlations": [
+    {
+      "predictor": "placement_residual_rms",
+      "description": "residual magnitude (what the loss minimises)",
+      "note": "no variance; correlation undefined"
+    },
+    {
+      "predictor": "placement_concentration",
+      "description": "residual placement (what the head reads)",
+      "note": "no variance; correlation undefined"
+    },
+    {
+      "predictor": "placement_nullspace_fraction",
+      "description": "fraction invisible to the classifier",
+      "note": "no variance; correlation undefined"
+    },
+    {
+      "predictor": "placement_logit_shift_rms",
+      "description": "induced logit displacement",
+      "note": "no variance; correlation undefined"
+    }
+  ],
+  "within_variant_correlations": [],
+  "geometry_outcome": [
+    {
+      "variant": "source",
+      "mean_accuracy": 0.10000000000000002,
+      "std": 1.6996749443881478e-17,
+      "cosine_mean": 0.9781449432751432,
+      "cosine_range": 0.03565177935875985,
+      "effective_rank": 4.70795565723823,
+      "etf_deviation": 1.1077227433075225
+    },
+    {
+      "variant": "etf",
+      "mean_accuracy": 0.10000000000000002,
+      "std": 1.6996749443881478e-17,
+      "cosine_mean": -0.11111111111111001,
+      "cosine_range": 9.251572495594385e-08,
+      "effective_rank": 8.99999999999999,
+      "etf_deviation": 5.079831241761035e-08
+    },
+    {
+      "variant": "gaussian",
+      "mean_accuracy": 0.10000000000000002,
+      "std": 1.6996749443881478e-17,
+      "cosine_mean": 0.012128058397769226,
+      "cosine_range": 0.234565973388824,
+      "effective_rank": 8.97824371630364,
+      "etf_deviation": 0.23891963046652073
+    },
+    {
+      "variant": "rotated",
+      "mean_accuracy": 0.10000000000000002,
+      "std": 1.6996749443881478e-17,
+      "cosine_mean": 0.9781449435052495,
+      "cosine_range": 0.03565177273471276,
+      "effective_rank": 4.707956278902413,
+      "etf_deviation": 1.1077227415765425
+    },
+    {
+      "variant": "label_permuted",
+      "mean_accuracy": 0.10000000000000002,
+      "std": 1.6996749443881478e-17,
+      "cosine_mean": 0.9781449432078742,
+      "cosine_range": 0.035651779358759406,
+      "effective_rank": 4.707955703440673,
+      "etf_deviation": 1.1077227433075219
+    },
+    {
+      "variant": "cosine_matched",
+      "mean_accuracy": 0.10000000000000002,
+      "std": 1.6996749443881478e-17,
+      "cosine_mean": 0.9781449407713132,
+      "cosine_range": 0.03565178230928967,
+      "effective_rank": 4.7079554999806925,
+      "etf_deviation": 1.1077227428057146
+    },
+    {
+      "variant": "mean_shuffled",
+      "mean_accuracy": 0.10000000000000002,
+      "std": 1.6996749443881478e-17,
+      "cosine_mean": 0.9782388409992276,
+      "cosine_range": 0.008127058545069676,
+      "effective_rank": 8.94205498547367,
+      "etf_deviation": 1.0933168311301154
+    },
+    {
+      "variant": "centered_shuffled",
+      "mean_accuracy": 0.10000000000000002,
+      "std": 1.6996749443881478e-17,
+      "cosine_mean": -0.11098358413789478,
+      "cosine_range": 0.3464340700871204,
+      "effective_rank": 8.946976495228881,
+      "etf_deviation": 0.17932947708268415
+    }
+  ],
+  "findings": [
+    "Replacing the optical prototypes with an equiangular frame costs only 0.00 pp, so there is no advantage here to attribute to anything. Either alignment is not helping in this configuration, or the runs have not separated.",
+    "The comparison against etf is not significant, but it had 2% power at 3 seeds - too little to treat the null as evidence of no difference.",
+    "The comparison against gaussian is not significant, but it had 2% power at 3 seeds - too little to treat the null as evidence of no difference.",
+    "The comparison against rotated is not significant, but it had 2% power at 3 seeds - too little to treat the null as evidence of no difference.",
+    "The comparison against label_permuted is not significant, but it had 2% power at 3 seeds - too little to treat the null as evidence of no difference.",
+    "The comparison against cosine_matched is not significant, but it had 2% power at 3 seeds - too little to treat the null as evidence of no difference.",
+    "The comparison against mean_shuffled is not significant, but it had 2% power at 3 seeds - too little to treat the null as evidence of no difference.",
+    "The comparison against centered_shuffled is not significant, but it had 2% power at 3 seeds - too little to treat the null as evidence of no difference."
+  ]
+}
