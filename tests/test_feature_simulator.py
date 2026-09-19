@@ -292,3 +292,32 @@ class TestLinearProbe:
         features = torch.randn(400, 64)
         labels = torch.randint(0, 4, (400,))
         assert linear_probe_accuracy(features, labels, num_classes=4) < 0.75
+
+
+class TestEmptyClassGuard:
+    """Regression: a class with no samples produced silent NaN prototypes.
+
+    Reachable on the real pipeline, where run_variant_experiment takes the class
+    count from the SAR dataset while the features come from the EO dataset. A
+    NaN prototype propagates through the alignment loss into every batch
+    containing that label, and NaN does not raise.
+    """
+
+    def test_raises_rather_than_returning_nan(self):
+        features = torch.randn(20, 8)
+        labels = torch.randint(0, 2, (20,))
+        with pytest.raises(ValueError, match="No samples for class indices"):
+            class_means_from_features(features, labels, num_classes=3)
+
+    def test_error_names_the_offending_classes(self):
+        features = torch.randn(30, 8)
+        labels = torch.zeros(30, dtype=torch.long)
+        with pytest.raises(ValueError, match=r"\[1, 2, 3\]"):
+            class_means_from_features(features, labels, num_classes=4)
+
+    def test_fully_populated_input_still_works(self):
+        features = torch.randn(30, 8)
+        labels = torch.arange(30) % 3
+        means = class_means_from_features(features, labels, num_classes=3)
+        assert means.shape == (3, 8)
+        assert not torch.isnan(means).any()

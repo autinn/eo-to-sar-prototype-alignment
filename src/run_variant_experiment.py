@@ -61,7 +61,7 @@ from model_utils import (
     load_dino_model,
     make_dino_transform,
 )
-from prototype_variants import build_ladder
+from prototype_variants import CONSTRUCTORS, TRANSFORMS, build_ladder
 from stats_utils import cohens_d, pooled_sd, welch_ttest
 from utils import load_config, save_json, seed_everything
 
@@ -123,10 +123,25 @@ def split_train_validation(
     for class_index in targets.unique().tolist():
         class_positions = (targets == class_index).nonzero(as_tuple=True)[0]
         shuffled = class_positions[torch.randperm(len(class_positions), generator=generator)]
-        # Keep at least one validation example per class where possible.
+        # Keep at least one validation example per class where possible. A class
+        # with a single image cannot contribute to both splits; it goes to
+        # training, since a class absent from training cannot be learned at all,
+        # whereas one absent from validation only weakens model selection. The
+        # caller is warned below because macro-F1 is then blind to that class.
         n_validation = max(1, int(round(fraction * len(shuffled)))) if len(shuffled) > 1 else 0
         validation_indices.extend(shuffled[:n_validation].tolist())
         train_indices.extend(shuffled[n_validation:].tolist())
+
+    # Model selection optimises macro-F1 over the validation split, so a class
+    # missing from it is a class the selection cannot see. Silent on UNICORNv2's
+    # ~1000:1 imbalance, where the rarest classes are exactly the ones at risk.
+    validation_targets = {int(targets[index]) for index in validation_indices}
+    unrepresented = sorted(set(targets.unique().tolist()) - validation_targets)
+    if unrepresented:
+        print(
+            f"  WARNING: classes {unrepresented} have too few samples to appear "
+            f"in validation; model selection is blind to them."
+        )
 
     return Subset(dataset, train_indices), Subset(dataset, validation_indices)
 
@@ -234,8 +249,23 @@ def train_one_run(
         "seed": seed,
         "best_epoch": best_epoch,
         "validation_macro_f1": float(best_validation_f1),
-        **{key: float(value) for key, value in test_metrics.items()},
-        **{key: float(value) for key, value in merged.items()},
+        # Accuracies are recorded in PERCENTAGE POINTS, not fractions.
+        # evaluate_classifier returns sklearn's accuracy_score, a fraction in
+        # [0, 1], but every threshold and printed figure downstream - the
+        # published comparisons in analysis/, the interpretation thresholds in
+        # analyse_experiment.py, the power analysis - is in percentage points.
+        # Converting here keeps one unit across the whole pipeline; leaving it
+        # as a fraction made a real 4 pp effect read as "0.04 pp, no advantage
+        # to attribute to anything", which is the false null this analysis
+        # exists to avoid. F1 scores stay as fractions, matching convention.
+        **{
+            key: float(value) * (100.0 if key.startswith("accuracy") else 1.0)
+            for key, value in test_metrics.items()
+        },
+        **{
+            key: float(value) * (100.0 if key.startswith("accuracy") else 1.0)
+            for key, value in merged.items()
+        },
         **{
             f"placement_{key}": value
             for key, value in placement_report(residual, head_weight).items()
@@ -328,6 +358,17 @@ def main() -> None:
     parser.add_argument("--out", type=Path, default=REPO_ROOT / "analysis")
     arguments = parser.parse_args()
 
+    # Validate before the expensive work. Feature extraction runs over the whole
+    # EO training set - 455,635 images in the real dataset - so a typo in
+    # --variants must fail here rather than after that pass completes.
+    known_variants = set(CONSTRUCTORS) | set(TRANSFORMS) | {"source"}
+    unknown = [name for name in (arguments.variants or []) if name not in known_variants]
+    if unknown:
+        parser.error(
+            f"Unknown variants: {sorted(unknown)}. "
+            f"Choose from {sorted(known_variants)}."
+        )
+
     if arguments.data_root is not None:
         train_sar_dir = arguments.data_root / "train" / "SAR_Train"
         train_eo_dir = arguments.data_root / "train" / "EO_Train"
@@ -368,9 +409,16 @@ def main() -> None:
 
     # EO prototypes come from the full EO training set, extracted once.
     eo_loader = DataLoader(train_eo, batch_size=BATCH_SIZE, shuffle=False)
-    eo_features, eo_labels = extract_features(backbone_factory().to(device), eo_loader, device)
+    # Bind the extraction backbone so it can be freed explicitly. Passing it
+    # inline leaves it resident with no reachable name, so a second backbone is
+    # built in train_one_run while the first is still on-device - two DINOv3
+    # copies at the transition, which is worth avoiding on 8 GB.
+    eo_backbone = backbone_factory().to(device)
+    eo_features, eo_labels = extract_features(eo_backbone, eo_loader, device)
     source_prototypes = class_means_from_features(eo_features, eo_labels, len(class_names))
-    del eo_features, eo_labels, eo_loader
+    del eo_backbone, eo_features, eo_labels, eo_loader
+    if device.type == "cuda":
+        torch.cuda.empty_cache()
 
     ladder = build_ladder(source_prototypes, seed=0)
     if arguments.variants:

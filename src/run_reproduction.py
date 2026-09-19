@@ -218,6 +218,14 @@ def main() -> None:
             f"-> {'reproduced' if verdict else 'DIFFERS'}"
         )
 
+    # Persist before printing. Every run above is a full training sweep, so a
+    # formatting failure in the summary table must not discard the results.
+    arguments.out.parent.mkdir(parents=True, exist_ok=True)
+    with arguments.out.open("w", encoding="utf-8") as handle:
+        json.dump({"results": results}, handle, indent=2)
+        handle.write("\n")
+    print(f"\nWrote {arguments.out}")
+
     print(f"\n{'=' * 70}\nSummary\n{'=' * 70}")
     print(f"  {'method':<32}{'published':>11}{'observed':>11}{'verdict':>14}")
     for outcome in results:
@@ -225,7 +233,16 @@ def main() -> None:
             print(f"  {outcome['method']:<32}{'-':>11}{'-':>11}{outcome['status']:>14}")
             continue
         comparison = outcome["comparison"]
-        verdict = "reproduced" if comparison["as_sample_std"]["reproduced"] else "DIFFERS"
+        # compare_to_published skips a convention entirely when both standard
+        # deviations are zero, so this key may be absent. A bare lookup here
+        # would raise after all five training runs have completed, discarding
+        # the whole sweep.
+        sample = comparison.get("as_sample_std")
+        verdict = (
+            ("reproduced" if sample["reproduced"] else "DIFFERS")
+            if sample
+            else "no variance"
+        )
         print(
             f"  {outcome['method']:<32}{comparison['published_mean']:>11.1f}"
             f"{comparison['observed_mean']:>11.1f}{verdict:>14}"
@@ -241,12 +258,6 @@ def main() -> None:
     ]
     if flipped:
         print(f"\n  NOTE: verdict depends on the std convention for: {flipped}")
-
-    arguments.out.parent.mkdir(parents=True, exist_ok=True)
-    with arguments.out.open("w", encoding="utf-8") as handle:
-        json.dump({"results": results}, handle, indent=2)
-        handle.write("\n")
-    print(f"\nWrote {arguments.out}")
 
 
 if __name__ == "__main__":

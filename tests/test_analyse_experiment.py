@@ -248,3 +248,47 @@ class TestLoading:
     def test_missing_file_raises_with_guidance(self, tmp_path):
         with pytest.raises(FileNotFoundError, match="run_variant_experiment"):
             load_experiment(tmp_path / "absent.json")
+
+
+class TestUnitsAndMissingKeys:
+    """Regressions found by code review.
+
+    Accuracies are recorded in percentage points by run_variant_experiment, and
+    the interpretation thresholds assume that. When the producer wrote fractions
+    instead, a genuine 4-percentage-point effect - larger than the paper's
+    headline result - was reported as "costs only 0.04 pp, so there is no
+    advantage here to attribute to anything", the exact false null this module
+    exists to prevent.
+    """
+
+    def test_a_real_effect_is_not_dismissed_as_no_advantage(self):
+        experiment = _experiment(
+            _runs("source", [33.0, 34.0, 32.0]),
+            [_comparison("etf", 4.0), _comparison("rotated", 0.1)],
+        )
+        findings = interpret(experiment, [])
+        assert not any("no advantage here to attribute" in text for text in findings)
+        assert any("travels with the angular geometry" in text for text in findings)
+
+    def test_power_warning_requires_a_test_to_have_been_run(self):
+        """paired_comparison omits unpaired_p for a degenerate comparison.
+        Defaulting the missing key to 1.0 read as "not significant" and produced
+        a power warning about a test that never happened."""
+        degenerate = {
+            "variant_a": "source",
+            "variant_b": "etf",
+            "mean_paired_difference": 1.5,
+            "pooled_sd": 1.5,
+            "n_seeds": 5,
+        }
+        experiment = _experiment(_runs("source", [33.0, 34.0]), [degenerate])
+        findings = interpret(experiment, [])
+        assert not any("too little to treat the null" in text for text in findings)
+
+    def test_power_warning_still_fires_when_a_test_did_run(self):
+        experiment = _experiment(
+            _runs("source", [33.0, 34.0]),
+            [_comparison("etf", 1.5, p_value=0.14, n=5)],
+        )
+        findings = interpret(experiment, [])
+        assert any("too little to treat the null" in text for text in findings)

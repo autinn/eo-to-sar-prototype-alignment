@@ -136,7 +136,14 @@ def plot_comparison_forest(comparisons: list[dict], output_path: Path) -> None:
         # A normal 1.96 multiplier would draw intervals that clear zero for
         # comparisons the test calls non-significant, since at about seven
         # degrees of freedom the t critical value is nearer 2.4.
-        standard_error = row["difference"] / row["t_statistic"]
+        # Prefer the standard error carried through from the test. Recovering it
+        # as difference / t divides 0/0 whenever two methods have identical
+        # reported means, which crashes the whole figure run.
+        standard_error = row.get("standard_error")
+        if standard_error is None:
+            standard_error = (
+                row["difference"] / row["t_statistic"] if row["t_statistic"] else 0.0
+            )
         critical = stats.t.ppf(0.975, row["degrees_of_freedom"])
         half_width = critical * standard_error
         colour = SIGNIFICANT_COLOUR if row["significant"] else NON_SIGNIFICANT_COLOUR

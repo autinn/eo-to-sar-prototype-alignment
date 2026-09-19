@@ -275,7 +275,11 @@ def interpret(experiment: dict, correlations: list[dict]) -> list[str]:
 
     # Power for every null result, so silence is not mistaken for absence.
     for (_, variant), row in comparisons.items():
-        if row.get("unpaired_p", 1.0) > 0.05 and "pooled_sd" in row:
+        # The key must be present, not defaulted. paired_comparison omits
+        # unpaired_p entirely for a degenerate comparison, and defaulting the
+        # absent key to 1.0 read as "not significant" - producing a power
+        # warning about a test that was never run.
+        if "unpaired_p" in row and row["unpaired_p"] > 0.05 and "pooled_sd" in row:
             power = achieved_power(
                 row["mean_paired_difference"], row["pooled_sd"], row["n_seeds"]
             )

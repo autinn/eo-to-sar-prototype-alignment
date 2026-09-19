@@ -200,6 +200,22 @@ def class_means_from_features(
     Averages raw features by class and normalizes afterwards, which is the order
     the published results used.
     """
+    # A class with no samples would average an empty selection to NaN, which
+    # F.normalize propagates and the alignment loss then spreads to every batch
+    # containing that label - silently, since NaN does not raise. This is
+    # reachable on the real pipeline: run_variant_experiment takes the class
+    # count from the SAR dataset while the features come from the EO dataset,
+    # so any class present in one and absent from the other lands here.
+    populated = torch.bincount(labels.to(torch.long), minlength=num_classes)
+    empty = (populated == 0).nonzero(as_tuple=True)[0].tolist()
+    if empty:
+        raise ValueError(
+            f"No samples for class indices {empty} out of {num_classes}. "
+            "Prototypes for these classes would be NaN. Check that the feature "
+            "set covers every class, and that num_classes matches the dataset "
+            "the features came from."
+        )
+
     means = torch.stack(
         [features[labels == class_index].mean(dim=0) for class_index in range(num_classes)]
     )

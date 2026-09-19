@@ -210,3 +210,33 @@ class TestGeometryReport:
         report = geometry_report(etf_prototypes(7, 128, seed=0))
         assert report["num_classes"] == 7
         assert report["feature_dim"] == 128
+
+
+class TestIsotropyOnPrototypeShapes:
+    """Regression: isotropy measured nothing on the shape it is mostly used with.
+
+    A ``(K, D)`` matrix with ``K < D`` has at most ``K - 1`` non-zero singular
+    values after mean-centring, so a raw minimum over all ``D`` of them returned
+    floating-point noise. On the ``(10, 384)`` prototype matrices in
+    ``geometry_report`` the descriptor read ~1e-16 for every input.
+    """
+
+    def test_discriminates_between_prototype_sets(self):
+        spherical = etf_prototypes(NUM_CLASSES, FEATURE_DIM, seed=0)
+        flattened = gaussian_prototypes(NUM_CLASSES, FEATURE_DIM, seed=0).clone()
+        flattened[:, 3:] *= 1e-6
+        assert isotropy(spherical) > 0.5
+        assert isotropy(flattened) < 0.01
+
+    def test_equiangular_frame_is_maximally_isotropic(self):
+        """An ETF spreads its energy equally over every direction it occupies."""
+        value = isotropy(etf_prototypes(NUM_CLASSES, FEATURE_DIM, seed=0))
+        assert value == pytest.approx(1.0, abs=1e-6)
+
+    def test_is_not_degenerate_for_random_prototypes(self):
+        """The bug's signature: a value indistinguishable from zero."""
+        assert isotropy(gaussian_prototypes(NUM_CLASSES, FEATURE_DIM, seed=0)) > 0.1
+
+    def test_tall_matrices_are_unaffected(self):
+        torch.manual_seed(0)
+        assert 0.0 < isotropy(torch.randn(200, 10)) <= 1.0

@@ -182,3 +182,19 @@ class TestWeightedSampler:
     def test_draws_the_dataset_length(self):
         labels = [index % 4 for index in range(80)]
         assert len(list(make_weighted_sampler(labels, seed=0))) == 80
+
+
+class TestSingletonClassWarning:
+    """A class with one image cannot reach validation, so macro-F1 - the model
+    selection metric - is blind to it. The split cannot fix this without
+    starving training of that class, so it must at least say so."""
+
+    def test_warns_when_a_class_cannot_reach_validation(self, capsys):
+        dataset = _FakeDataset([0] * 50 + [1])
+        split_train_validation(dataset, 0.2, seed=0)
+        assert "WARNING" in capsys.readouterr().out
+
+    def test_silent_when_every_class_is_represented(self, capsys):
+        dataset = _FakeDataset([index % 5 for index in range(100)])
+        split_train_validation(dataset, 0.2, seed=0)
+        assert "WARNING" not in capsys.readouterr().out

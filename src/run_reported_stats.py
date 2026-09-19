@@ -90,6 +90,7 @@ def compare_pair(
         "mean_a": float(a["accuracy_mean"]),
         "mean_b": float(b["accuracy_mean"]),
         "difference": difference,
+        "standard_error": test["standard_error"],
         "t_statistic": test["t_statistic"],
         "degrees_of_freedom": test["degrees_of_freedom"],
         "p_value": test["p_value"],

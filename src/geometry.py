@@ -107,8 +107,18 @@ def isotropy(features: torch.Tensor) -> float:
 
     One means the cloud is perfectly spherical; near zero means it is flattened
     into a lower-dimensional subspace.
+
+    Only the singular values the data can actually support are considered. An
+    ``(N, D)`` matrix with ``N < D`` has at most ``N - 1`` non-zero singular
+    values after mean-centring, so taking the raw minimum over all ``D`` of them
+    returns floating-point noise rather than a measurement. On the ``(10, 384)``
+    prototype matrices this module is mostly used with, that made the descriptor
+    report ~1e-16 for every input and discriminate nothing.
     """
     values = _singular_values(features)
+    # Rank after centring is bounded by both dimensions, minus one for the mean.
+    supported = max(1, min(features.shape[0] - 1, features.shape[1]))
+    values = values[:supported]
     largest = float(values.max())
     if largest <= 1e-12:
         return 0.0
