@@ -70,7 +70,43 @@ def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--data", type=Path, default=DEFAULT_DATA)
     parser.add_argument("--seed", type=int, default=0)
+    parser.add_argument(
+        "--variant",
+        default="vits16plus",
+        help="DINOv3 variant for --real. vits16plus is the one the paper used.",
+    )
+    parser.add_argument(
+        "--real",
+        action="store_true",
+        help=(
+            "Use the real DINOv3 backbone from config.yaml instead of the stub. "
+            "This is the check to run the day access is granted, before "
+            "trusting any downstream number."
+        ),
+    )
     arguments = parser.parse_args()
+
+    # The backbone is chosen once and used everywhere below, so that --real
+    # exercises the same path the experiments take.
+    if arguments.real:
+        # Hugging Face by default, since that is where the access grant leads.
+        # A local clone plus .pth still works through load_dino_model when
+        # config.yaml provides the paths.
+        from hf_backbone import attention_target_modules, load_hf_dinov3
+
+        backbone_factory = lambda: load_hf_dinov3(arguments.variant)  # noqa: E731
+        probe = backbone_factory()
+        backbone_name = probe.repo_id
+        # peft matches adapters by module name, and the transformers
+        # implementation does not call its attention projection "qkv". Passing
+        # the published ["qkv"] here would attach nothing and silently train
+        # only the classifier head.
+        lora_targets = attention_target_modules(probe)
+        del probe
+    else:
+        backbone_factory = load_stub_model
+        backbone_name = "stub"
+        lora_targets = ["qkv"]
 
     train_sar_dir = arguments.data / "train" / "SAR_Train"
     train_eo_dir = arguments.data / "train" / "EO_Train"
@@ -101,7 +137,7 @@ def main() -> None:
     print("Stage 2: extract EO features and build prototypes")
     print("=" * 70)
     eo_loader = DataLoader(train_eo, batch_size=BATCH_SIZE, shuffle=False)
-    eo_backbone = load_stub_model().to(device)
+    eo_backbone = backbone_factory().to(device)
     eo_features, eo_labels = extract_features(eo_backbone, eo_loader, device)
     print(f"  EO features: {tuple(eo_features.shape)}")
 
@@ -128,9 +164,9 @@ def main() -> None:
     print("=" * 70)
     print("Stage 4: LoRA fine-tuning with prototype alignment")
     print("=" * 70)
-    model = DINOClassifier(load_stub_model(), num_classes=len(class_names))
+    model = DINOClassifier(backbone_factory(), num_classes=len(class_names))
     model = apply_lora(
-        model, rank=8, alpha=16, target_modules=["qkv"], dropout=0.05
+        model, rank=8, alpha=16, target_modules=lora_targets, dropout=0.05
     ).to(device)
 
     train_loader = DataLoader(train_sar, batch_size=BATCH_SIZE, shuffle=True)
@@ -196,10 +232,17 @@ def main() -> None:
 
     print()
     print("=" * 70)
-    print("Pipeline completed. Accuracies above are meaningless - the backbone is")
-    print("a stand-in and the data is synthetic. What this shows is that every")
-    print("stage connects, so swapping load_stub_model for load_dino_model is the")
-    print("only change needed once DINOv3 access is granted.")
+    if backbone_name == "stub":
+        print("Pipeline completed on the STUB backbone. Accuracies above are")
+        print("meaningless - the backbone is a stand-in and the data may be")
+        print("synthetic. What this shows is that every stage connects.")
+        print("Re-run with --real once DINOv3 access is granted.")
+    else:
+        print(f"Pipeline completed on {backbone_name}. Every stage ran against the")
+        print("real backbone: feature extraction, prototype construction, LoRA")
+        print("fine-tuning, evaluation, geometry and placement analysis.")
+        print("If the data was synthetic the accuracies are still meaningless,")
+        print("but the code path is now verified against real weights.")
     print("=" * 70)
 
 
